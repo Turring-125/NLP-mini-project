@@ -23,7 +23,7 @@ try:
 except Exception:
     pass
 
-st.set_page_config(page_title="Farmer Voice Assistant", page_icon="🌾", layout="wide")
+st.set_page_config(page_title="Farmer Voice Assistant", layout="wide")
 
 @st.cache_resource
 def load_models():
@@ -38,7 +38,7 @@ def get_whisper(model_size: str):
     return whisper.load_model(model_size, device="cpu")
 
 def main():
-    st.title("🌾 Voice-Enabled Farmer Query Assistant")
+    st.title("Voice-Enabled Farmer Query Assistant")
     st.markdown(
         "**AI Irrigation & Agronomy Advisory Layer for Sugarcane Farmers** | "
         "Powered by OpenAI Whisper, NLTK & Kisan Call Centre (KCC) Real Data"
@@ -50,7 +50,7 @@ def main():
     stop_words = clf_bundle["stop_words"]
 
     # Sidebar: Metrics & Benchmarks
-    st.sidebar.header("📊 Model Benchmark Dashboard")
+    st.sidebar.header("Model Benchmark Dashboard")
     asr_path = os.path.join("results", "asr_results.csv")
     if os.path.exists(asr_path):
         st.sidebar.subheader("1. Whisper ASR Benchmark (FLEURS en_us)")
@@ -129,7 +129,7 @@ def main():
             m2.metric("Confidence", f"{confidence:.1%}")
 
             # --- NLP Analysis Section (Course Syllabus Extension) ---
-            with st.expander("🧬 NLP Analysis (NER, Chunking & WSD)", expanded=True):
+            with st.expander("NLP Analysis (NER, Chunking & WSD)", expanded=True):
                 # 1. Named Entity Recognition (NER)
                 try:
                     from ner import extract_entities, format_entities_grouped
@@ -156,7 +156,7 @@ def main():
                     from wsd import disambiguate_sentence
                     wsd_results = disambiguate_sentence(query_text)
                     if wsd_results:
-                        wsd_items = [f"**{r['word']}** → *{r['sense_label'].split('(')[0].strip()}*" for r in wsd_results]
+                        wsd_items = [f"**{r['word']}** -> *{r['sense_label'].split('(')[0].strip()}*" for r in wsd_results]
                         st.markdown("**Word Sense Disambiguation:** " + " &nbsp;|&nbsp; ".join(wsd_items))
                     else:
                         st.markdown("**Word Sense Disambiguation:** *No ambiguous target words detected*")
@@ -169,7 +169,7 @@ def main():
 
             # Guardrail: Check confidence and similarity threshold
             if confidence < 0.45 or top_sim < 0.30:
-                st.warning("⚠️ **Low confidence - please consult an agronomist.** The system is unsure about this query.")
+                st.warning("**Low confidence - please consult an agronomist.** The system is unsure about this query.")
 
             st.markdown("### Top Retrieved Historical KCC Expert Advisories")
             for idx, r in enumerate(results, 1):
