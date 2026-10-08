@@ -1,0 +1,4 @@
+model_size,wer,cer,avg_seconds_per_clip
+tiny,0.1521,0.0674,0.45
+base,0.1052,0.0497,0.79
+small,0.0676,0.0281,1.93

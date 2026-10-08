@@ -1,0 +1,16 @@
+# Core NLP, Speech & ML dependencies
+# Note: ffmpeg is required on the system PATH for Whisper audio loading and non-WAV formats.
+# On Windows, install via winget (`winget install Gyan.FFmpeg`) or download from ffmpeg.org.
+
+openai-whisper>=20231117
+jiwer>=3.0.0
+datasets>=2.14.0
+soundfile>=0.12.0
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+streamlit>=1.28.0
+nltk>=3.8.0
+kagglehub>=0.2.0
+joblib>=1.3.0

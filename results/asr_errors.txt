@@ -1,0 +1,63 @@
+WHISPER ASR ERROR EXAMPLES (Reference vs Hypothesis)
+======================================================================
+
+Error 1 [Model: tiny, Clip: 1]:
+  Reference : however due to the slow communication channels styles in the west could lag behind by 25 to 30 year
+  Hypothesis: however due to the slow communication channels styles in the west could lag behind by 25 to 30 years
+
+Error 2 [Model: tiny, Clip: 2]:
+  Reference : all nouns alongside the word sie for you always begin with a capital letter even in the middle of a sentence
+  Hypothesis: all now is alongside the worlds safe for you always begin with a capital letter even in the middle of a sentence
+
+Error 3 [Model: tiny, Clip: 3]:
+  Reference : to the north and within easy reach is the romantic and fascinating town of sintra and which was made famous to foreigners after a glowing account of its splendours recorded by lord byron
+  Hypothesis: to the north and with an easy reach is a romantic and fascinating town of sinatra which was made famous to foreigners after a glowing account of its splendor is recorded by lord byron
+
+Error 4 [Model: tiny, Clip: 4]:
+  Reference : the cabbage juice changes color depending on how acidic or basic alkaline the chemical is
+  Hypothesis: the cap is used to change its color depending on how acidic basic alkaline the chemical is
+
+Error 5 [Model: tiny, Clip: 5]:
+  Reference : many people dont think about them as dinosaurs because they have feathers and can fly
+  Hypothesis: maybe people dont think about them as senators because they have feathers and can fly
+
+Error 6 [Model: tiny, Clip: 7]:
+  Reference : the northern marianas emergency management office said that there were no damages reported in the nation
+  Hypothesis: the northern mariannas emergency management office said that there were no damages reported in the nation
+
+Error 7 [Model: tiny, Clip: 8]:
+  Reference : twentieth century research has shown that there are two pools of genetic variation hidden and expressed
+  Hypothesis: 20th century research has shown that there are two poles of genetic variation hidden and expressed
+
+Error 8 [Model: tiny, Clip: 9]:
+  Reference : the aspect ratio of this format dividing by twelve to obtain the simplest wholenumber ratio is therefore said to be 32
+  Hypothesis: the aspect ratio of this format the vying by 12 to obtain the simplest whole number ratio is therefore said to be free to 2
+
+Error 9 [Model: tiny, Clip: 11]:
+  Reference : through the night between 150 and 200 copies were made now known as dunlap broadsides
+  Hypothesis: theres a night between 150 and 200 copies remain now known as the net broad sides
+
+Error 10 [Model: tiny, Clip: 12]:
+  Reference : for example each year students from bennet school in north carolina design a website about their trip to the state capital each year the website gets remodeled but old versions are kept online to serve as a scrapbook
+  Hypothesis: for example each of your students from bennett school in north carolina to sign a website about their trips to the state capital each year the website gets remodeled but old versions are kept online to serve as a scrapbook
+
+Error 11 [Model: tiny, Clip: 13]:
+  Reference : lion prides act much like packs of wolves or dogs animals surprisingly similar to lions but not other big cats in behavior and also very deadly to their prey
+  Hypothesis: lionprize acts much like packs of wolves or dogs animals surprisingly similar to lions but not other big cats in behavior and also very deadly to their prey
+
+Error 12 [Model: tiny, Clip: 14]:
+  Reference : the city is also the base to climb the nyiragongo volcano along with some of the cheapest mountain gorilla tracking in africa
+  Hypothesis: the city is also the base to climb that nairaiganggo volcano along with some of the cheapest mountain gorilla trafficking in africa
+
+Error 13 [Model: tiny, Clip: 15]:
+  Reference : the internet combines elements of both mass and interpersonal communication
+  Hypothesis: the internet combines elements of both mass and an interpersonal communication
+
+Error 14 [Model: tiny, Clip: 16]:
+  Reference : these theories look at what it is about certain people that make them want the things that they do and what things in their environment will make them do or not do certain things
+  Hypothesis: these things i seek out what it is about certain people that make them want the things that they do and what things in their environment will make them do or not do certain things
+
+Error 15 [Model: tiny, Clip: 17]:
+  Reference : for example the most common still image photography format in the world is 35mm which was the dominant film size at the close of the analog film era
+  Hypothesis: for example the most common still image photography format in the world is 35 millimeter which was the dominant film size at the close of the analog film era
+
