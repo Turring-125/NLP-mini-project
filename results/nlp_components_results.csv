@@ -1,0 +1,5 @@
+Component,Metric,Score
+Agricultural NER,F1-Score,0.9867
+Agricultural NER,Precision,0.9737
+Agricultural NER,Recall,1.0
+Word Sense Disambiguation,Accuracy,1.0

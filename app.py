@@ -65,6 +65,12 @@ def main():
     st.sidebar.metric(label="Precision@1 (KCC Test)", value="90.20%")
     st.sidebar.info("Knowledge Base: 72,708 authentic KCC query-answer records.")
 
+    nlp_comp_path = os.path.join("results", "nlp_components_results.csv")
+    if os.path.exists(nlp_comp_path):
+        st.sidebar.subheader("4. Syllabus NLP Components")
+        nlp_df = pd.read_csv(nlp_comp_path)
+        st.sidebar.dataframe(nlp_df, use_container_width=True, hide_index=True)
+
     # Main Area: Audio Upload or Query Input
     col1, col2 = st.columns([1, 1])
 
@@ -121,6 +127,41 @@ def main():
             m1, m2 = st.columns(2)
             m1.metric("Predicted Domain", pred_category)
             m2.metric("Confidence", f"{confidence:.1%}")
+
+            # --- NLP Analysis Section (Course Syllabus Extension) ---
+            with st.expander("🧬 NLP Analysis (NER, Chunking & WSD)", expanded=True):
+                # 1. Named Entity Recognition (NER)
+                try:
+                    from ner import extract_entities, format_entities_grouped
+                    ents = extract_entities(query_text)
+                    grouped = format_entities_grouped(ents)
+                    if grouped:
+                        ent_items = [f"**{lbl}**: `{', '.join(vals)}`" for lbl, vals in grouped.items()]
+                        st.markdown("**Recognized Entities:** " + " &nbsp;|&nbsp; ".join(ent_items))
+                    else:
+                        st.markdown("**Recognized Entities:** *None detected*")
+                except Exception as e:
+                    st.caption(f"NER notice: {e}")
+
+                # 2. Shallow Parsing / Chunking
+                try:
+                    from shallow_parser import parse_chunks
+                    chunk_repr = parse_chunks(query_text)
+                    st.markdown(f"**Shallow Parse:** `{chunk_repr}`")
+                except Exception as e:
+                    st.caption(f"Parsing notice: {e}")
+
+                # 3. Word Sense Disambiguation (WSD)
+                try:
+                    from wsd import disambiguate_sentence
+                    wsd_results = disambiguate_sentence(query_text)
+                    if wsd_results:
+                        wsd_items = [f"**{r['word']}** → *{r['sense_label'].split('(')[0].strip()}*" for r in wsd_results]
+                        st.markdown("**Word Sense Disambiguation:** " + " &nbsp;|&nbsp; ".join(wsd_items))
+                    else:
+                        st.markdown("**Word Sense Disambiguation:** *No ambiguous target words detected*")
+                except Exception as e:
+                    st.caption(f"WSD notice: {e}")
 
             # Retrieve top 3 answers
             results = retriever.search(query_text, top_k=3)

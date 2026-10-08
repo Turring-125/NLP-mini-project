@@ -6,19 +6,23 @@
 ### Table of Contents
 1. [Executive Summary & Domain Objectives](#1-executive-summary--domain-objectives)
 2. [End-to-End System Architecture & Dataflow](#2-end-to-end-system-architecture--dataflow)
-3. [Dataset Profiles & Preprocessing Pipeline](#3-dataset-profiles--preprocessing-pipeline)
-4. [Mathematical Formulations & Model Mechanics](#4-mathematical-formulations--model-mechanics)
-   - 4.1 [Automatic Speech Recognition (ASR): OpenAI Whisper](#41-automatic-speech-recognition-asr-openai-whisper)
-   - 4.2 [Linguistic Morphology: Stemming vs Lemmatization](#42-linguistic-morphology-stemming-vs-lemmatization)
-   - 4.3 [Feature Representation: TF-IDF Vector Space](#43-feature-representation-tf-idf-vector-space)
-   - 4.4 [Intent Classification: Multinomial Naive Bayes & Logistic Regression](#44-intent-classification-multinomial-naive-bayes--logistic-regression)
-   - 4.5 [Information Retrieval Engine: Vector Space Cosine Similarity](#45-information-retrieval-engine-vector-space-cosine-similarity)
-5. [Empirical Experimental Results & Benchmark Tables](#5-empirical-experimental-results--benchmark-tables)
-6. [Qualitative Linguistic & ASR Error Analysis](#6-qualitative-linguistic--asr-error-analysis)
-7. [Codebase Anatomy & Component Walkthrough](#7-codebase-anatomy--component-walkthrough)
-8. [Audio Ingestion Pipeline & OS Compatibility Hardening](#8-audio-ingestion-pipeline--os-compatibility-hardening)
-9. [Integration with the Sugarcane Irrigation Decision System](#9-integration-with-the-sugarcane-irrigation-decision-system)
-10. [Known Limitations & Future Technical Trajectory](#10-known-limitations--future-technical-trajectory)
+3. [NLP Course Syllabus Mapping](#3-nlp-course-syllabus-mapping)
+4. [Dataset Profiles & Preprocessing Pipeline](#4-dataset-profiles--preprocessing-pipeline)
+5. [Mathematical Formulations & Model Mechanics](#5-mathematical-formulations--model-mechanics)
+   - 5.1 [Automatic Speech Recognition (ASR): OpenAI Whisper (Module 5.3)](#51-automatic-speech-recognition-asr-openai-whisper-module-53)
+   - 5.2 [Linguistic Morphology: Stemming vs Lemmatization (Module 2.1)](#52-linguistic-morphology-stemming-vs-lemmatization-module-21)
+   - 5.3 [Agricultural Named Entity Recognition (Module 2.3)](#53-agricultural-named-entity-recognition-module-23)
+   - 5.4 [Shallow Parsing & Chunking Grammar (Module 2.3 / 3)](#54-shallow-parsing--chunking-grammar-module-23--3)
+   - 5.5 [Word Sense Disambiguation: Lesk & Syntax (Module 4.3)](#55-word-sense-disambiguation-lesk--syntax-module-43)
+   - 5.6 [Feature Representation: TF-IDF Vector Space](#56-feature-representation-tf-idf-vector-space)
+   - 5.7 [Intent Classification: Multinomial Naive Bayes & Logistic Regression](#57-intent-classification-multinomial-naive-bayes--logistic-regression)
+   - 5.8 [Information Retrieval Engine: Vector Space Cosine Similarity](#58-information-retrieval-engine-vector-space-cosine-similarity)
+6. [Empirical Experimental Results & Benchmark Tables](#6-empirical-experimental-results--benchmark-tables)
+7. [Qualitative Linguistic & ASR Error Analysis](#7-qualitative-linguistic--asr-error-analysis)
+8. [Codebase Anatomy & Component Walkthrough](#8-codebase-anatomy--component-walkthrough)
+9. [Audio Ingestion Pipeline & OS Compatibility Hardening](#9-audio-ingestion-pipeline--os-compatibility-hardening)
+10. [Integration with the Sugarcane Irrigation Decision System](#10-integration-with-the-sugarcane-irrigation-decision-system)
+11. [Known Limitations & Future Technical Trajectory](#11-known-limitations--future-technical-trajectory)
 
 ---
 
@@ -31,10 +35,13 @@ The primary application domain is serving as the conversational decision-support
 The assistant provides an instant, accurate voice-to-advisory pipeline that:
 1. Ingests raw voice input (WAV/MP3/M4A/OGG) or text queries.
 2. Transcribes acoustic speech using OpenAI Whisper models benchmarked on CPU.
-3. Preprocesses and normalizes agricultural text using NLTK morphological analysis.
-4. Classifies query intent into 9 specialized agricultural domains using a calibrated Logistic Regression model (achieving **99.15% accuracy** and **0.9740 Macro-F1**).
-5. Queries a 72,708-document TF-IDF vector index to retrieve the top-3 historically validated expert recommendations (achieving **90.20% Precision@1** on unseen test queries).
-6. Implements safety guardrails: warns the farmer (`"Low confidence - please consult an agronomist"`) when classifier probability $< 0.45$ or retrieval similarity $< 0.30$.
+3. Preprocesses and normalizes agricultural text using NLTK morphological analysis (Stemming vs Lemmatization).
+4. Extracts domain-specific entities (crops, diseases, pests, fertilizers, chemicals, quantities, units, conditions, time, locations) via a hybrid Named Entity Recognition module.
+5. Performs shallow parsing to extract Noun Phrases (NP), Verb Phrases (VP), and Prepositional Phrases (PP).
+6. Disambiguates polysemous agricultural terms (e.g., `plant`, `field`, `rot`, `yield`, `spray`) using syntactic mood and WordNet Lesk overlap.
+7. Classifies query intent into 9 specialized agricultural domains using a calibrated Logistic Regression model (achieving **99.15% accuracy** and **0.9740 Macro-F1**).
+8. Queries a 72,708-document TF-IDF vector index to retrieve the top-3 historically validated expert recommendations (achieving **90.20% Precision@1** on unseen test queries).
+9. Implements safety guardrails: warns the farmer (`"Low confidence - please consult an agronomist"`) when classifier probability $< 0.45$ or retrieval similarity $< 0.30$.
 
 ---
 
@@ -56,7 +63,7 @@ Farmer Spoken Audio (WAV / MP3 / M4A)
 │ OpenAI Whisper ASR (tiny / base / small)               │
 │  - Log-Mel Spectrogram extraction (80 channels)        │
 │  - 2x 1D Convolution downsampling                      │
-│  - Transformer Encoder-Decoder (Beam search / Greedy)  │
+│  - Transformer Encoder-Decoder (Greedy decoding)       │
 └────────────────────────────────────────────────────────┘
                  │
                  ▼ Raw Transcript Text
@@ -65,10 +72,29 @@ Farmer Spoken Audio (WAV / MP3 / M4A)
 │  - Lowercasing                                         │
 │  - Regex punctuation & symbol removal: [^\w\s]         │
 │  - NLTK English stopword filtering                     │
-│  - Morphological normalization                         │
+│  - Morphological normalization (Porter vs WordNet)     │
 └────────────────────────────────────────────────────────┘
                  │
                  ▼ Cleaned Query String
+┌────────────────────────────────────────────────────────┐
+│ Named Entity Recognition (NER - Module 2.3)            │
+│  - CROP, DISEASE, PEST, FERTILIZER, CHEMICAL           │
+│  - QUANTITY, UNIT, CONDITION, TIME, LOCATION           │
+└────────────────────────────────────────────────────────┘
+                 │
+                 ▼
+┌────────────────────────────────────────────────────────┐
+│ Shallow Parsing / Chunking (Module 2.3 / 3)            │
+│  - Noun Phrases (NP), Verb Phrases (VP), PPs           │
+└────────────────────────────────────────────────────────┘
+                 │
+                 ▼
+┌────────────────────────────────────────────────────────┐
+│ Word Sense Disambiguation (WSD - Module 4.3)           │
+│  - Disambiguates 'plant', 'field', 'rot', 'yield', etc.│
+│  - Syntactic mood + WordNet Lesk overlap               │
+└────────────────────────────────────────────────────────┘
+                 │
        ┌─────────┴───────────────────────────────────────┐
        │                                                 │
        ▼                                                 ▼
@@ -99,10 +125,23 @@ Farmer Spoken Audio (WAV / MP3 / M4A)
 
 ---
 
-### 3. Dataset Profiles & Preprocessing Pipeline
+### 3. NLP Course Syllabus Mapping
 
-#### 3.1 Kisan Call Centre (KCC) Query-Answer Dataset
-- **Origin**: Government of India, Ministry of Agriculture & Farmers Welfare Kisan Call Centre records (distributed via Kaggle Hub).
+| Syllabus Module | Topic Area | Code File | Purpose & Role in Pipeline |
+| :--- | :--- | :--- | :--- |
+| **Module 2.1** | **Morphology** | [train.py](file:///d:/clg/LY/NLP/mini%20project/train.py) | Porter Stemmer vs WordNet Lemmatizer comparison on 10 farm terms |
+| **Module 2.3** | **Named Entities** | [ner.py](file:///d:/clg/LY/NLP/mini%20project/ner.py) | Agricultural NER for crops, chemicals, pests, quantities, and units |
+| **Module 2.3 / 3** | **Structures & Parsing** | [shallow_parser.py](file:///d:/clg/LY/NLP/mini%20project/shallow_parser.py) | Part-of-Speech tagging & Regexp Parser for NP, VP, and PP chunking |
+| **Module 4.1** | **Lexical Semantics & WordNet** | [train.py](file:///d:/clg/LY/NLP/mini%20project/train.py), [wsd.py](file:///d:/clg/LY/NLP/mini%20project/wsd.py) | WordNet lexical database, lemmas, and synset hierarchies |
+| **Module 4.3** | **Word Sense Disambiguation** | [wsd.py](file:///d:/clg/LY/NLP/mini%20project/wsd.py) | Contextual disambiguation of polysemous farm words (`plant`, `rot`, etc.) |
+| **Module 5.3** | **Sequence-to-Sequence Models**| [asr_eval.py](file:///d:/clg/LY/NLP/mini%20project/asr_eval.py), [app.py](file:///d:/clg/LY/NLP/mini%20project/app.py) | Whisper Transformer encoder-decoder architecture with 80-channel mel input |
+
+---
+
+### 4. Dataset Profiles & Preprocessing Pipeline
+
+#### 4.1 Kisan Call Centre (KCC) Query-Answer Dataset
+- **Origin**: Government of India, Ministry of Agriculture & Farmers Welfare Kisan Call Centre records (via Kaggle Hub).
 - **Raw Volume**: 178,939 total rows.
 - **Columns**: `questions` (raw farmer query), `answers` (expert agricultural extension officer response), `category` (domain category).
 - **Deduplication & Hygiene**:
@@ -129,129 +168,76 @@ Farmer Spoken Audio (WAV / MP3 / M4A)
 - **Methodology**: `train_test_split(..., test_size=0.2, random_state=42, stratify=y)`.
 - **Training Records**: 72,708 samples saved to `data/kcc_train.csv`.
 - **Testing Records**: 18,178 samples saved to `data/kcc_test.csv`.
-- **Stratification**: Guarantees exact class proportions across both splits down to minority classes (e.g., Post Harvest: 304 train / 76 test).
-
-#### 3.2 Google FLEURS Speech Dataset (`en_us`)
-- **Origin**: Google FLEURS (Few-shot Learning Evaluation of Universal Representations of Speech), curated 50 audio clips of native/non-native spoken English saved in `data/fleurs_50.joblib`.
-- **Audio Format**: 16,000 Hz, 1-channel mono PCM.
-- **Ground Truth**: Manually transcribed reference sentences used to calculate exact Word Error Rate (WER) and Character Error Rate (CER).
 
 ---
 
-### 4. Mathematical Formulations & Model Mechanics
+### 5. Mathematical Formulations & Model Mechanics
 
-#### 4.1 Automatic Speech Recognition (ASR): OpenAI Whisper
+#### 5.1 Automatic Speech Recognition (ASR): OpenAI Whisper (Module 5.3)
 
-##### Acoustic Feature Extraction
 Whisper processes audio $x(t)$ by converting the raw 16 kHz waveform into an 80-channel log-magnitude Mel spectrogram:
 1. Audio divided into 25 ms frames (400 samples) with a 10 ms hop size (160 samples) using a Hanning window.
 2. Fast Fourier Transform (FFT) computes the frequency spectrum.
 3. Spectrum mapped onto 80 Mel-scale filter banks spaced logarithmically from 0 Hz to 8,000 Hz:
 $$m = 2595 \log_{10}\left(1 + \frac{f}{700}\right)$$
 4. Natural logarithm applied: $S = \log(\text{MelSpectrum} + 10^{-5})$.
-5. The resulting matrix is normalized to $[-1, 1]$.
+5. Transformer Encoder downsamples via two 1D convolutions (stride 2) to 50 Hz representations.
+6. Transformer Decoder autoregressively predicts Byte-Pair Encoding tokens with cross-attention.
 
-##### Transformer Encoder-Decoder Architecture
-- **Stem**: Two 1D convolutional layers with filter width 3 and stride 2 compress the temporal dimension by a factor of 4 (reducing 100 frames/sec to 50 Hz feature representations).
-- **Encoder**: Pre-activation residual blocks with multi-head self-attention and GELU feed-forward networks.
-- **Decoder**: Standard autoregressive sequence-to-sequence Transformer with causal multi-head self-attention and cross-attention over encoder outputs. Uses a 51,865-token byte-level Byte-Pair Encoding (BPE) vocabulary.
+#### 5.2 Linguistic Morphology: Stemming vs Lemmatization (Module 2.1)
+- **Porter Stemmer**: Algorithmic affix stripping using 5 cascading heuristic rule sets.
+- **WordNet Lemmatizer**: Morphological reduction using lexical database lookup, preserving syntactic validity.
 
-##### Model Specifications Compared:
-| Parameter | `tiny` | `base` | `small` |
-| :--- | :---: | :---: | :---: |
-| Layers (Encoder / Decoder) | 4 / 4 | 6 / 6 | 12 / 12 |
-| Hidden Dimension ($d_{model}$) | 384 | 512 | 768 |
-| Attention Heads | 6 | 8 | 12 |
-| Total Parameters | 39 Million | 74 Million | 244 Million |
-| Relative CPU Compute Overhead | $1\times$ | $\sim 1.75\times$ | $\sim 4.3\times$ |
+#### 5.3 Agricultural Named Entity Recognition (Module 2.3)
+Implements a hybrid multi-token gazetteer and regular expression system:
+$$\text{Entities} = \text{GazetteerMatch}(\mathcal{G}_{\text{Agri}}) \cup \text{RegexMatch}(\mathcal{P}_{\text{Qty/Unit/Time/Cond}})$$
+Prioritizes greedy longest-match first to resolve multi-word entities (e.g. `red rot` over `rot`, `drip irrigation` over `irrigation`).
 
-##### ASR Evaluation Metrics
-1. **Word Error Rate (WER)**:
-$$WER = \frac{S + D + I}{N} = \frac{\text{Substitutions} + \text{Deletions} + \text{Insertions}}{\text{Reference Word Count}}$$
-Calculated using Levenshtein distance dynamic programming after text normalization (lowercasing, punctuation stripping).
-2. **Character Error Rate (CER)**:
-$$CER = \frac{S_c + D_c + I_c}{N_c}$$
-Measured at character granularity, penalizing acoustic spelling deviations.
+#### 5.4 Shallow Parsing & Chunking Grammar (Module 2.3 / 3)
+Constructs chunk trees over Part-of-Speech tags using regular expression grammar:
+```python
+CHUNK_GRAMMAR = r"""
+  NP: {<DT|PRP\$|POS>?<JJ.*|CD>*<NN.*>+}   # Noun Phrase
+  VP: {<MD>?<VB.*>+(<RB.*>)?}              # Verb Phrase
+  PP: {<IN>+<NP>}                          # Prepositional Phrase
+"""
+```
 
----
+#### 5.5 Word Sense Disambiguation: Lesk & Syntax (Module 4.3)
+Combines sentence-level syntactic mood detection with WordNet gloss overlap:
+- **Imperative / Action Detection**: If word occurs at sentence-initial position without subject pronoun or follows modal verbs/infinitives (`to`, `should`, `please`), it is treated as a transitive verb action (e.g. `Plant 50 kg...` $\to$ `plant.v.01`).
+- **Nominal Context Detection**: If preceded by determiners/possessives (`the`, `my`, `this`), it is treated as a botanical noun organism (`The plant is affected...` $\to$ `plant.n.02`).
+- **Domain Clue Matching**: Resolves `field` as agricultural land if agricultural lexical context is present, otherwise academic discipline.
 
-#### 4.2 Linguistic Morphology: Stemming vs Lemmatization
-
-Natural Language Processing in agricultural advisory requires standardizing highly inflected terminology (e.g., *infestation*, *infesting*, *infested*).
-
-1. **Porter Stemming Algorithm (`nltk.stem.PorterStemmer`)**:
-   - A cascading heuristic rule-engine based on 5 sequential transformation phases.
-   - Evaluates word endings against measure $m$ (vowel-consonant sequence count $[C](VC)^m[V]$).
-   - Example rule: `(*v*) ING ->` reduces `dropping` to `drop`.
-   - Characteristic: Fast, purely syntactic affix truncation that often yields non-lexical stems (e.g., `varieties` $\to$ `varieti`, `weedicides` $\to$ `weedicid`).
-
-2. **WordNet Lemmatization (`nltk.stem.WordNetLemmatizer`)**:
-   - Leverages the Princeton WordNet lexical database.
-   - Applies morphological analysis (Morphy) to strip inflectional affixes and match words against canonical dictionary lemmas.
-   - Characteristic: Computationally heavier, guarantees valid English base words (e.g., `varieties` $\to$ `variety`, `diseases` $\to$ `disease`).
-
----
-
-#### 4.3 Feature Representation: TF-IDF Vector Space
-
-Both the intent classifier and retrieval engine utilize Term Frequency - Inverse Document Frequency (TF-IDF) feature weighting.
-
+#### 5.6 Feature Representation: TF-IDF Vector Space
 Given term $t$, document $d$, and corpus $D$:
-$$\text{TF}(t, d) = f_{t,d} \quad (\text{frequency of } t \text{ in } d)$$
-$$\text{IDF}(t, D) = \log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1$$
-$$\text{TF-IDF}(t, d, D) = \text{TF}(t, d) \times \text{IDF}(t, D)$$
+$$\text{TF-IDF}(t, d, D) = f_{t,d} \times \left[\log\left(\frac{1 + |D|}{1 + |\{d \in D : t \in d\}|}\right) + 1\right]$$
+Normalized using Euclidean $L_2$ norm.
 
-To prevent document length bias, vectors are normalized using the Euclidean ($L_2$) norm:
-$$\mathbf{v}_{\text{norm}} = \frac{\mathbf{v}}{\|\mathbf{v}\|_2} = \frac{\mathbf{v}}{\sqrt{\sum_{i=1}^{M} v_i^2}}$$
-
-- **Classifier Vectorizer**: $M = 10,000$ features, $n$-gram range $(1, 2)$ (captures phrases like *"red rot"*, *"urea dose"*, *"drip irrigation"*).
-- **Retrieval Vectorizer**: $M = 15,000$ features, $n$-gram range $(1, 2)$.
-
----
-
-#### 4.4 Intent Classification: Multinomial Naive Bayes & Logistic Regression
-
-##### 1. Multinomial Naive Bayes (Baseline)
-Assumes conditional independence between feature tokens given the class label $c_k$:
-$$P(c_k \mid \mathbf{x}) \propto P(c_k) \prod_{j=1}^{M} P(w_j \mid c_k)^{x_j}$$
-With Laplace (add-1) smoothing:
-$$P(w_j \mid c_k) = \frac{N_{k,j} + 1}{N_k + M}$$
-Where $N_{k,j}$ is the count of term $j$ in class $k$, and $N_k$ is the total token count in class $k$.
-
-##### 2. Multinomial Logistic Regression (Main Classifier)
-Models class posterior probabilities directly using the Softmax function over a linear combination of features:
+#### 5.7 Intent Classification: Logistic Regression
+Multinomial Softmax regression with $L_2$ penalty:
 $$P(Y = k \mid \mathbf{x}) = \frac{\exp(\mathbf{w}_k^T \mathbf{x} + b_k)}{\sum_{j=1}^{K} \exp(\mathbf{w}_j^T \mathbf{x} + b_j)}$$
 
-Objective function minimized using the L-BFGS (Limited-memory Broyden–Fletcher–Goldfarb–Shanno) quasi-Newton algorithm with $L_2$ weight regularization:
-$$\mathcal{L}(\mathbf{W}) = -\sum_{i=1}^{N} \sum_{k=1}^{K} \mathbb{I}(y_i = k) \log P(Y = k \mid \mathbf{x}_i) + \frac{1}{2C} \sum_{k=1}^{K} \|\mathbf{w}_k\|_2^2$$
-Where $C = 1.0$, `max_iter = 300`.
-Confidence score is computed as $\max_{k} P(Y=k \mid \mathbf{x})$.
+#### 5.8 Information Retrieval Engine
+Computes cosine similarity between unit-norm query vector $\mathbf{q}$ and sparse CSR training matrix $\mathbf{A}$:
+$$\mathbf{s} = \mathbf{q} \mathbf{A}^T$$
+Evaluated using Precision@1 on 18,178 unseen test queries.
 
 ---
 
-#### 4.5 Information Retrieval Engine: Vector Space Cosine Similarity
+### 6. Empirical Experimental Results & Benchmark Tables
 
-The retrieval index encodes all $N = 72,708$ training questions into a sparse Compressed Sparse Row (CSR) matrix $\mathbf{A} \in \mathbb{R}^{72708 \times 15000}$.
+#### 6.1 Extended NLP Components Evaluation ([nlp_eval.py](file:///d:/clg/LY/NLP/mini%20project/nlp_eval.py))
 
-When an input query $q$ is received:
-1. $q$ is vectorized into unit-norm sparse vector $\mathbf{q} \in \mathbb{R}^{1 \times 15000}$.
-2. Cosine similarities across all indexed documents are computed via single sparse matrix-vector multiplication:
-$$\mathbf{s} = \mathbf{q} \mathbf{A}^T \in \mathbb{R}^{1 \times 72708}$$
-Since both $\mathbf{q}$ and rows of $\mathbf{A}$ are $L_2$-normalized:
-$$\text{sim}(q, d_i) = \mathbf{q} \cdot \mathbf{d}_i^T = \cos(\theta)$$
-3. The top-$k$ ($k=3$) indices are extracted using partial quickselect (`np.argsort`):
-$$\text{Top-}k = \operatorname{arg\,top-}k_{i} (\mathbf{s}_i)$$
+| Component | Metric | Score | Evaluation Methodology |
+| :--- | :--- | :---: | :--- |
+| **Agricultural NER** | **Precision** | **97.37%** | Strict span-and-label exact match on benchmark suite |
+| **Agricultural NER** | **Recall** | **100.00%**| Comprehensive multi-token gazetteer coverage |
+| **Agricultural NER** | **F1-Score** | **98.67%** | Harmonic mean of precision and recall |
+| **Word Sense Disambiguation** | **Accuracy** | **100.00%**| Contextual sense resolution on ambiguous target words |
+| **Shallow Parsing** | **Coverage** | **100.00%**| Correct extraction of NP, VP, and PP structures |
 
-##### Metric: Precision@1
-Precision@1 measures whether the single most similar retrieved query belongs to the exact same agricultural domain as the test query:
-$$\text{Precision@1} = \frac{1}{|Q_{\text{test}}|} \sum_{j=1}^{|Q_{\text{test}}|} \mathbb{I}\left(\operatorname{Category}(\operatorname{Top1}(q_j)) == \operatorname{Category}(q_j)\right)$$
-
----
-
-### 5. Empirical Experimental Results & Benchmark Tables
-
-#### 5.1 Speech Recognition Evaluation (FLEURS 50 Clips)
-Benchmarked locally on Windows Intel CPU:
+#### 6.2 Speech Recognition Evaluation (FLEURS 50 Clips)
 
 | Model | WER (%) | CER (%) | Latency / Clip | Total Time (50 clips) | Optimal Environment |
 | :--- | :---: | :---: | :---: | :---: | :--- |
@@ -259,248 +245,76 @@ Benchmarked locally on Windows Intel CPU:
 | **Whisper `base`** | **10.52%** | **4.97%** | **0.79s** | 39.5s | **Standard Laptop / Real-time Production** |
 | **Whisper `small`**| **6.76%**  | **2.81%** | **1.93s** | 96.5s | Server-side / Batch Processing |
 
-*Trade-off analysis*: Whisper `base` reduces Word Error Rate by nearly **31% relative to `tiny`** (15.21% $\to$ 10.52%) while remaining sub-second per clip ($0.79\text{s}$), making it the recommended default.
-
----
-
-#### 5.2 Morphology Benchmark: Stemming vs Lemmatization (10 Real Agricultural Words)
-
-| Input Word | Porter Stemmer Output | WordNet Lemmatizer Output | Linguistic Mechanism Explained |
-| :--- | :--- | :--- | :--- |
-| `infestation` | `infest` | `infestation` | Stemmer drops derivational noun suffix `-ation` |
-| `varieties` | `varieti` | `variety` | Lemmatizer resolves plural `-ies` to canonical noun root |
-| `dropping` | `drop` | `dropping` | Stemmer removes inflectional participle suffix `-ing` |
-| `fertilizers` | `fertil` | `fertilizer` | Lemmatizer handles plural noun inflection |
-| `spraying` | `spray` | `spraying` | Stemmer reduces action verb to base root |
-| `weedicides` | `weedicid` | `weedicides` | Stemmer drops trailing `-e` heuristically |
-| `borers` | `borer` | `borer` | Lemmatizer maps plural `-s` to singular agent noun |
-| `cultivation` | `cultiv` | `cultivation` | Stemmer aggressively truncates `-ation` |
-| `germinating` | `germin` | `germinating` | Stemmer removes continuous suffix `-ating` |
-| `diseases` | `diseas` | `disease` | Lemmatizer restores canonical vocabulary entry |
-
----
-
-#### 5.3 Intent Classifier Benchmark (18,178 Unseen Test Queries)
+#### 6.3 Intent Classifier Benchmark (18,178 Unseen Test Queries)
 
 | Architecture | Overall Accuracy | Macro-Average F1 | Weighted-Average F1 | Training Time |
 | :--- | :---: | :---: | :---: | :---: |
 | **Multinomial Naive Bayes (Baseline)** | 92.32% | 0.7876 | 0.9184 | 0.42s |
 | **Logistic Regression (Main Model)** | **99.15%** | **0.9740** | **0.9914** | 2.56s |
 
-##### Detailed Classification Report (Logistic Regression on Test Set):
-```
-                              precision    recall  f1-score   support
-
-         Agronomic Practices       0.97      0.96      0.97       723
-Animal Husbandry & Fisheries       0.98      0.99      0.99      1066
-            General Advisory       0.99      1.00      0.99      7548
- Government Schemes & Credit       1.00      0.98      0.99       636
-         Nutrient Management       0.99      0.98      0.99      1590
-            Plant Protection       1.00      0.99      1.00      6299
-      Post Harvest & Storage       0.99      0.95      0.97        76
-            Water Management       0.97      0.95      0.96       148
-             Weed Management       0.99      0.86      0.92        92
-
-                    accuracy                           0.99     18178
-                   macro avg       0.99      0.96      0.97     18178
-                weighted avg       0.99      0.99      0.99     18178
-```
-
----
-
-#### 5.4 Retrieval Engine Benchmark
-
+#### 6.4 Retrieval Engine Benchmark
 - **Indexed Documents**: 72,708 historical farmer queries + agronomist answers.
 - **Evaluation Set**: 18,178 unseen test queries.
-- **Categorical Precision@1**: **90.20%** (16,396 / 18,178 queries correctly matched to the same domain at rank #1).
+- **Categorical Precision@1**: **90.20%**.
 - **Inference Speed**: $< 1.5\text{ ms}$ per query across 72,708 documents via CSR matrix vectorization.
 
 ---
 
-### 6. Qualitative Linguistic & ASR Error Analysis
+### 7. Qualitative Linguistic & ASR Error Analysis
 
-Inspection of errors logged in [`results/asr_errors.txt`](file:///d:/clg/LY/NLP/mini%20project/results/asr_errors.txt) reveals four distinct linguistic failure categories:
-
-#### 1. Phonetic Homophones & Substitutions
-When phonetic acoustic representations overlap, smaller Whisper models bias toward conversational English rather than specialized vocabulary:
-- Reference: `town of sintra and which was made famous`
-  $\to$ Hypothesis: `town of sinatra which was made famous` (*sintra* $\to$ *sinatra*)
-- Reference: `mountain gorilla tracking in africa`
-  $\to$ Hypothesis: `mountain gorilla trafficking in africa` (*tracking* $\to$ *trafficking*)
-- Reference: `two pools of genetic variation`
-  $\to$ Hypothesis: `two poles of genetic variation` (*pools* $\to$ *poles*)
-- Reference: `dont think about them as dinosaurs because`
-  $\to$ Hypothesis: `dont think about them as senators because` (*dinosaurs* $\to$ *senators*)
-
-#### 2. Number & Measurement Orthography
-Whisper automatically normalizes spoken numerical expressions to digits, producing technical string mismatch:
-- Reference: `twentieth century research has shown`
-  $\to$ Hypothesis: `20th century research has shown`
-- Reference: `simplest wholenumber ratio is therefore said to be 32`
-  $\to$ Hypothesis: `simplest whole number ratio is therefore said to be free to 2`
-- Reference: `photography format in the world is 35mm`
-  $\to$ Hypothesis: `photography format in the world is 35 millimeter`
-
-#### 3. Regional Proper Nouns & Agricultural Entities
-Low-frequency proper nouns suffer character corruption:
-- Reference: `climb the nyiragongo volcano`
-  $\to$ Hypothesis: `climb that nairaiganggo volcano`
-- Reference: `dunlap broadsides`
-  $\to$ Hypothesis: `the net broad sides`
+Inspection of errors logged in [`results/asr_errors.txt`](file:///d:/clg/LY/NLP/mini%20project/results/asr_errors.txt) reveals three distinct linguistic failure categories:
+1. **Phonetic Homophones & Substitutions**: Acoustic confusion leads to common conversational words (`sintra` $\to$ `sinatra`, `tracking` $\to$ `trafficking`, `pools` $\to$ `poles`).
+2. **Number Orthography**: Spoken numbers transcribed as digits (`twentieth century` $\to$ `20th century`, `35mm` $\to$ `35 millimeter`).
+3. **Proper Nouns**: Low-frequency regional names incur character substitutions (`nyiragongo` $\to$ `nairaiganggo`).
 
 ---
 
-### 7. Codebase Anatomy & Component Walkthrough
-
-Every script in the codebase is modular, self-contained, and constrained to $< 150$ lines.
+### 8. Codebase Anatomy & Component Walkthrough
 
 ```
 d:/clg/LY/NLP/mini project/
-├── explore.py              (106 lines) - Data ingestion & category mapping
-├── asr_eval.py             (130 lines) - FLEURS Whisper ASR benchmark & error logging
-├── train.py                (143 lines) - Morphology analysis, TF-IDF & classifier training
-├── retrieve.py             (130 lines) - TF-IDF search engine & Precision@1 evaluation
-├── pipeline_eval.py        (115 lines) - End-to-end user recording pipeline test
-├── app.py                  (128 lines) - Streamlit web app with dual audio decoding
-├── requirements.txt         (14 lines) - Dependency manifest with FFmpeg notes
-├── README.md               (184 lines) - High-level project documentation
-├── data/
-│   ├── kcc_queries.csv     (178,939 records raw dataset)
-│   ├── kcc_train.csv       (72,708 training QA pairs)
-│   ├── kcc_test.csv        (18,178 test QA pairs)
-│   └── fleurs_50.joblib    (50 audio clips + references)
-├── models/
-│   ├── classifier_bundle.joblib  (Vectorizer, LogisticRegression, Classes, Stopwords)
-│   └── retrieval_bundle.joblib   (Vectorizer, CSR Matrix, Training DataFrame)
-└── results/
-    ├── asr_results.csv           (WER, CER, Latency table)
-    ├── asr_wer_cer.png           (ASR performance chart)
-    ├── asr_errors.txt            (15 qualitative error breakdowns)
-    ├── classifier_results.csv    (NB vs LogReg performance)
-    ├── confusion_matrix.png      (9-class confusion matrix plot)
-    └── retrieval_results.csv     (Precision@1 results)
+├── explore.py              (106 lines) - Step 0: Data ingestion & category mapping
+├── asr_eval.py             (130 lines) - Step 1: FLEURS Whisper ASR benchmark & error logging
+├── train.py                (143 lines) - Step 2: Morphology analysis, TF-IDF & classifier training
+├── retrieve.py             (130 lines) - Step 3: TF-IDF search engine & Precision@1 evaluation
+├── pipeline_eval.py        (123 lines) - Step 4: End-to-end user recording pipeline test
+├── app.py                  (183 lines) - Step 5: Streamlit web app with NLP Analysis UI
+├── ner.py                  (112 lines) - Module 2.3: Agricultural Named Entity Recognition
+├── shallow_parser.py       (81 lines)  - Module 2.3/3: POS tagging & Regexp Chunk Parser
+├── wsd.py                  (135 lines) - Module 4.3: Word Sense Disambiguation
+├── nlp_eval.py             (156 lines) - Step 7: Evaluation suite for NER, WSD, and Chunking
+├── requirements.txt        (14 lines)  - Dependency manifest with FFmpeg notes
+└── README.md               (215 lines) - High-level project documentation
 ```
-
-#### Detailed Script Breakdown:
-
-1. **`explore.py`**:
-   - Downloads/loads `kcc_queries.csv`.
-   - Inspects missing values, shapes, and duplicate queries.
-   - Maps raw call center query types into clean agricultural category taxonomy.
-   - Prints sample queries across categories.
-
-2. **`asr_eval.py`**:
-   - Loads 50 audio clips and reference texts from `data/fleurs_50.joblib`.
-   - Evaluates Whisper `tiny`, `base`, and `small` sequentially on CPU.
-   - Computes WER and CER via `jiwer`.
-   - Generates and saves `results/asr_results.csv`, `results/asr_wer_cer.png`, and `results/asr_errors.txt`.
-
-3. **`train.py`**:
-   - Executes `demonstrate_morphology()`: prints side-by-side table of Porter Stemmer vs WordNet Lemmatizer on 10 farm terms.
-   - Cleans text (lowercase, regex punctuation strip, NLTK stopwords).
-   - Generates stratified 80/20 train/test split.
-   - Fits $N$-gram (1,2) TF-IDF vectorizer ($10,000$ features).
-   - Trains Multinomial Naive Bayes baseline and Logistic Regression.
-   - Computes and exports confusion matrix plot to `results/confusion_matrix.png`.
-   - Saves model bundle to `models/classifier_bundle.joblib`.
-   - Exports `data/kcc_train.csv` and `data/kcc_test.csv`.
-
-4. **`retrieve.py`**:
-   - Implements `FarmerQueryRetriever` class.
-   - Builds TF-IDF sparse index ($15,000$ features) over training queries.
-   - Evaluates batch `Precision@1` across all 18,178 test queries.
-   - Exposes `search(query, top_k=3)` returning matched query, answer, category, and cosine score.
-   - Serializes index to `models/retrieval_bundle.joblib`.
-
-5. **`pipeline_eval.py`**:
-   - Verifies existence of `my_recordings/` and `my_recordings/my_recordings.csv`.
-   - If missing, logs explicit graceful skip message per project specification.
-   - If present, transcribes user audio with Whisper, compares classified intent against reference text, and measures category change rate and corrupted farming terms.
-
-6. **`app.py`**:
-   - Streamlit interactive interface.
-   - Features dual audio loading (direct `soundfile` in-memory decoding + `ffmpeg` fallback).
-   - Dropdown for Whisper model size (`tiny`, `base`, `small`).
-   - Displays recognized text, predicted category, confidence score, and top-3 retrieved historical answers in expandable cards.
-   - Implements safety guardrail warning if confidence $< 0.45$ or similarity $< 0.30$.
-   - Sidebar displays live benchmark metrics from CSV files.
 
 ---
 
-### 8. Audio Ingestion Pipeline & OS Compatibility Hardening
+### 9. Audio Ingestion Pipeline & OS Compatibility Hardening
 
-On Windows environments, OpenAI Whisper's native `load_audio()` executes a subprocess call:
-```python
-cmd = ["ffmpeg", "-nostdin", "-threads", "0", "-i", file, "-f", "s16le", "-ac", "1", "-acodec", "pcm_s16le", "-ar", "16000", "-"]
-subprocess.Popen(cmd, ...)
-```
-If `ffmpeg` is not in Windows system `PATH`, this raises `FileNotFoundError: [WinError 2] The system cannot find the file specified`.
-
-#### Solution Implemented in `app.py`:
-1. **Dynamic Binary Registration**:
-   Locates the bundled `imageio-ffmpeg` static binary, creates a local `ffmpeg.exe` in the workspace, and injects its directory into `os.environ["PATH"]`.
+On Windows environments, OpenAI Whisper's native `load_audio()` executes a subprocess call to `ffmpeg`.
+To prevent `FileNotFoundError: [WinError 2]`:
+1. **Dynamic Binary Registration**: Locates bundled `imageio-ffmpeg` static binary, creates a local `ffmpeg.exe` in the workspace, and injects its directory into `os.environ["PATH"]`.
 2. **Dual-Path Audio Loader**:
-   - **Primary (Zero-Subprocess)**: Uses Python `soundfile` (`sf.read`) to read WAV/FLAC/OGG directly from memory into a NumPy float32 array, resampling to 16 kHz via `scipy.signal.resample` if necessary. Whisper's `transcribe()` accepts NumPy arrays directly, completely bypassing `ffmpeg`.
-   - **Fallback**: Falls back to the temporary file path with the dynamically resolved `ffmpeg.exe` for compressed formats like MP3/M4A.
+   - **Primary**: Uses Python `soundfile` (`sf.read`) to decode WAV/FLAC/OGG directly from memory into a NumPy float32 array, resampling to 16 kHz via `scipy.signal.resample`. Whisper accepts NumPy arrays directly, completely bypassing `ffmpeg`.
+   - **Fallback**: Falls back to the temporary file path with dynamically resolved `ffmpeg.exe` for compressed formats like MP3/M4A.
 
 ---
 
-### 9. Integration with the Sugarcane Irrigation Decision System
+### 10. Integration with the Sugarcane Irrigation Decision System
 
-This voice assistant serves as the conversational intelligence layer for a broader IoT-enabled Sugarcane Irrigation Decision System:
+In commercial sugarcane cultivation, water management directly dictates stalk elongation, internode formation, sucrose content, and cane yield:
+- **Formative Stage (60–130 days)**: Critical period where water deficit reduces cane tonnage drastically.
+- **Maturity / Ripening Stage**: Moderate moisture withholding enhances sucrose concentration.
 
-```
-┌────────────────────────────────────────────────────────┐
-│               Farmer Voice Interaction                 │
-│        "The sugarcane leaves are curling and           │
-│         the soil is drying up, should I irrigate?"     │
-└────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│ Voice-Enabled Farmer Query Assistant (This System)     │
-│  - Recognizes audio query                              │
-│  - Categorizes intent: "Water Management"              │
-│  - Extracts matched past agronomist recommendation     │
-└────────────────────────────────────────────────────────┘
-                            │
-                            ▼ Contextual Advisory Intent
-┌────────────────────────────────────────────────────────┐
-│ Sugarcane Irrigation Decision Engine                   │
-│  - Query IoT Soil Moisture Sensors (Tension in kPa)   │
-│  - Check Phenological Stage: Formative (Day 60-130)    │
-│  - Query Weather Forecast API (Rainfall probability)   │
-│  - Calculate Crop Evapotranspiration (ETc = Kc x ETo)  │
-└────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│ Closed-Loop Action & Spoken Feedback                   │
-│  - Automated Action: Trigger Solenoid Drip Valve       │
-│  - Voice Output: "Soil moisture is at 45% depletion.   │
-│    Formative stage requires irrigation. Initiating     │
-│    drip cycle for 3 hours."                            │
-└────────────────────────────────────────────────────────┘
-```
-
-#### Agronomic Irrigation Rules for Sugarcane:
-- **Germination Phase (0–30 days)**: Frequent light irrigations to establish root zone.
-- **Formative Phase (60–130 days)**: **Peak water requirement**. Soil moisture depletion must not exceed 50% available water capacity. Irrigation interval typically 7–10 days in summer. Deficit here leads to irreversible internode stunting.
-- **Grand Growth Phase (130–250 days)**: Heavy vegetative growth; irrigation interval 10–12 days.
-- **Ripening Phase (250–365 days)**: Moderate water deficit withheld 15–20 days prior to harvest to promote sucrose synthesis and prevent lodging.
+The Farmer Query Assistant serves as the human-interaction frontend:
+1. Translates spoken farmer concerns into structured agricultural intent and recognized entities (crops, conditions, quantities).
+2. Cross-references live IoT soil tension / weather sensors before generating definitive irrigation schedule advisories.
+3. Automatically triggers an agronomist review warning whenever retrieval similarity or classification confidence drops below safety thresholds.
 
 ---
 
-### 10. Known Limitations & Future Technical Trajectory
+### 11. Known Limitations & Future Technical Trajectory
 
-1. **Acoustic Adaptation to Indian Accents & Rural Dialects**:
-   - Whisper standard models were trained predominantly on standard English. When rural farmers speak with regional accents or code-switch (e.g., Hinglish, Kannada-English, Tamil-English), Word Error Rate increases.
-   - *Future Work*: Parameter-efficient fine-tuning (LoRA) of Whisper on Indian agricultural speech corpora (e.g., AI4Bharat IndicVoices, Bhashini).
-
-2. **Out-of-Vocabulary (OOV) Agrochemicals**:
-   - Novel commercial pesticide formulations and bio-fertilizer trade names may not exist in the TF-IDF vocabulary.
-   - *Future Work*: Augment TF-IDF with a dense embedding retriever (e.g., `sentence-transformers/all-MiniLM-L6-v2` or `BGE-small-en-v1.5`) in a hybrid BM25 + Dense retrieval pipeline.
-
-3. **Multi-Turn Dialogue State Tracking**:
-   - The current architecture operates in single-turn query $\to$ advisory mode.
-   - *Future Work*: Add conversational memory with LangChain/LlamaIndex to support follow-up questions (e.g., *"How much does that fertilizer cost?"* or *"Can I mix it with insecticide?"*).
+1. **Acoustic Adaptation to Indian Accents**: Parameter-efficient fine-tuning (LoRA) of Whisper on Indian agricultural speech corpora (e.g., AI4Bharat IndicVoices, Bhashini).
+2. **Dense Retrieval Augmentation**: Augment TF-IDF with a dense embedding retriever (e.g., `sentence-transformers/all-MiniLM-L6-v2`) in a hybrid BM25 + Dense retrieval pipeline.
+3. **Conversational Memory**: Add multi-turn dialogue state tracking with LangChain to support follow-up questions.

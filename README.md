@@ -1,29 +1,43 @@
 # 🌾 Voice-Enabled Farmer Query Assistant
 ### Advisory & Chatbot Layer for an AI Sugarcane Irrigation & Agronomy Decision System
 
-This project implements an end-to-end, voice-enabled query assistant designed for agricultural advisory, specifically tailored as the conversational layer of an AI-driven irrigation advisory system for sugarcane farmers. Built using 100% real-world data and open-source models running locally on CPU.
+This project implements an end-to-end, voice-enabled query assistant designed for agricultural advisory, specifically tailored as the conversational decision-support layer of an AI-driven irrigation advisory system for sugarcane farmers. Built using 100% real-world data and open-source models running locally on CPU.
 
 ---
 
-## 📋 System Architecture
+## 📋 Extended NLP Pipeline Architecture
 
 ```text
-Spoken Query (WAV/MP3)
+Farmer Voice (Spoken Audio Clip)
          │
          ▼
-[ Whisper ASR Engine ]  ──► Normalized Transcribed Text
-(tiny / base / small)                │
-                                     ▼
-                      [ Text Preprocessing & Cleaning ]
-                      (Lowercasing, Punctuation, Stopwords)
-                                     │
-         ┌───────────────────────────┴───────────────────────────┐
+[ Audio Processing & Ingestion ] ──► Dual Path: direct soundfile PCM or imageio-ffmpeg
+         │
+         ▼
+[ Whisper ASR Engine ]           ──► Raw Transcribed Query Text (tiny / base / small)
+         │
+         ▼
+[ Text Normalization ]           ──► Lowercased, stripped punctuation, filtered stopwords
+         │
+         ▼
+[ Morphological Processing ]     ──► Porter Stemming & WordNet Lemmatization (Module 2.1)
+         │
+         ▼
+[ Named Entity Recognition ]     ──► CROP, DISEASE, PEST, FERTILIZER, QUANTITY, etc. (Module 2.3)
+         │
+         ▼
+[ Shallow Parsing / Chunking ]   ──► [NP ...], [VP ...], [PP ...] Syntactic Chunks (Module 2.3 / 3)
+         │
+         ▼
+[ Word Sense Disambiguation ]    ──► Contextual disambiguation of 'plant', 'rot', etc. (Module 4.3)
+         │
+         ├───────────────────────────────────────────────────────┐
          ▼                                                       ▼
 [ Intent Classifier ]                                   [ TF-IDF Knowledge Retriever ]
-(Logistic Regression)                                   (Cosine Similarity Search)
+(Multinomial Logistic Regression)                       (Cosine Similarity Search)
          │                                                       │
          ▼                                                       ▼
-Predicted Category + Confidence                         Top-3 Historical KCC Expert Advisories
+Predicted Category + Confidence %                       Top-3 Historical KCC Expert Advisories
          │                                                       │
          └───────────────────────────┬───────────────────────────┘
                                      ▼
@@ -31,8 +45,23 @@ Predicted Category + Confidence                         Top-3 Historical KCC Exp
              (Prompts Agronomist Review if confidence < 45% or sim < 0.30)
                                      │
                                      ▼
-                         Streamlit User Interface
+                     Streamlit User Interface (app.py)
 ```
+
+---
+
+## 🎓 NLP Course Syllabus Mapping
+
+This project maps directly to core Natural Language Processing syllabus modules:
+
+| Syllabus Module | Topic Area | Project Component & Implementation File |
+| :--- | :--- | :--- |
+| **Module 2.1** | **Morphology** | Stemming vs Lemmatization comparison ([train.py](file:///d:/clg/LY/NLP/mini%20project/train.py)) |
+| **Module 2.3** | **Named Entities** | Agricultural Domain NER ([ner.py](file:///d:/clg/LY/NLP/mini%20project/ner.py)) |
+| **Module 2.3 / 3** | **Structures & Parsing** | Shallow Parsing & Chunking ([shallow_parser.py](file:///d:/clg/LY/NLP/mini%20project/shallow_parser.py)) |
+| **Module 4.1** | **Lexical Semantics & WordNet** | Princeton WordNet synset hierarchy & lemmas ([train.py](file:///d:/clg/LY/NLP/mini%20project/train.py), [wsd.py](file:///d:/clg/LY/NLP/mini%20project/wsd.py)) |
+| **Module 4.3** | **Word Sense Disambiguation** | Contextual Lesk & syntactic mood disambiguation ([wsd.py](file:///d:/clg/LY/NLP/mini%20project/wsd.py)) |
+| **Module 5.3** | **Sequence-to-Sequence Models**| OpenAI Whisper Transformer encoder-decoder ([asr_eval.py](file:///d:/clg/LY/NLP/mini%20project/asr_eval.py), [app.py](file:///d:/clg/LY/NLP/mini%20project/app.py)) |
 
 ---
 
@@ -44,7 +73,11 @@ Predicted Category + Confidence                         Top-3 Historical KCC Exp
 ├── train.py                # Step 2: Morphology (stemming/lemmatization) & classifier training
 ├── retrieve.py             # Step 3: TF-IDF vector retrieval engine & Precision@1 evaluation
 ├── pipeline_eval.py        # Step 4: End-to-end pipeline evaluation on user recordings
-├── app.py                  # Step 5: Interactive Streamlit web interface
+├── app.py                  # Step 5: Interactive Streamlit web app with NLP Analysis
+├── ner.py                  # Module 2.3: Agricultural Named Entity Recognition
+├── shallow_parser.py       # Module 2.3/3: Part-of-Speech tagging & Regexp Chunk Parser
+├── wsd.py                  # Module 4.3: Word Sense Disambiguation for agricultural terms
+├── nlp_eval.py             # Step 7: Evaluation suite for NER, WSD, and Chunking
 ├── requirements.txt        # Python dependency manifest (with FFmpeg note)
 ├── data/
 │   ├── kcc_queries.csv     # Full raw Kisan Call Centre Q&A dataset (178,939 records)
@@ -59,8 +92,52 @@ Predicted Category + Confidence                         Top-3 Historical KCC Exp
     ├── asr_wer_cer.png           # ASR performance bar chart
     ├── asr_errors.txt            # 15 qualitative speech transcription error examples
     ├── classifier_results.csv    # Naive Bayes vs Logistic Regression comparison
-    └── confusion_matrix.png      # 9-class confusion matrix plot
+    ├── confusion_matrix.png      # 9-class confusion matrix plot
+    ├── retrieval_results.csv     # Precision@1 retrieval metrics
+    └── nlp_components_results.csv# NER (P/R/F1) and WSD accuracy evaluation metrics
 ```
+
+---
+
+## 🧩 Deep Dive: Extended NLP Components
+
+### 1. Named Entity Recognition (`ner.py`)
+- **Purpose**: Identifies agricultural entities in conversational farmer queries.
+- **Entity Labels**:
+  - `CROP`: *sugarcane, paddy, wheat, cotton, maize, coconut, etc.*
+  - `DISEASE`: *red rot, smut, rust, blast, blight, wilt, leaf curl, etc.*
+  - `PEST`: *stem borer, top borer, pyrilla, aphid, whitefly, thrips, etc.*
+  - `FERTILIZER`: *urea, dap, mop, ssp, npk, zinc sulphate, compost, etc.*
+  - `CHEMICAL`: *chlorpyrifos, carbendazim, bavistin, atrazine, malathion, etc.*
+  - `QUANTITY` & `UNIT`: *2 acres, 50 kg, 5 litres, 10 bags, 75 tons, etc.*
+  - `CONDITION`: *soil is very dry, moisture stress, yellowing leaves, cracked soil, wilting, etc.*
+  - `TIME`: *yesterday, tomorrow, summer, june, kharif, etc.*
+  - `LOCATION`: *maharashtra, punjab, field, nursery, farm, etc.*
+  - `IRRIGATION`: *drip irrigation, flood irrigation, furrow, drip lateral, etc.*
+- **Methodology**: Multi-token greedy gazetteer matching + specialized regex patterns for quantities, temporal expressions, and environmental conditions.
+
+### 2. Shallow Parsing & Chunking (`shallow_parser.py`)
+- **Purpose**: Demonstrates syntactic phrase structure without the overhead of full dependency trees.
+- **Chunk Grammar**:
+  ```python
+  CHUNK_GRAMMAR = r"""
+    NP: {<DT|PRP\$|POS>?<JJ.*|CD>*<NN.*>+}   # Noun Phrase
+    VP: {<MD>?<VB.*>+(<RB.*>)?}              # Verb Phrase
+    PP: {<IN>+<NP>}                          # Prepositional Phrase
+  """
+  ```
+- **Example**:
+  - Input: `"my sugarcane leaves are curling because of water stress"`
+  - Output: `[NP my sugarcane leaves] [VP are curling] [PP because of water stress]`
+
+### 3. Word Sense Disambiguation (`wsd.py`)
+- **Purpose**: Resolves the exact semantic meaning of polysemous agricultural words based on contextual syntactic clues and WordNet synsets:
+  - `"Plant the sugarcane seedlings tomorrow."` $\to$ **`plant`**: *planting / agricultural action (sowing seeds into ground)* (`plant.v.01`).
+  - `"The plant is affected by red rot."` $\to$ **`plant`**: *crop / botanical organism (living plant)* (`plant.n.02`).
+  - `"Working in the sugarcane field."` $\to$ **`field`**: *farm plot / agricultural land* (`field.n.01`).
+  - `"Expert in the field of agronomy."` $\to$ **`field`**: *domain / discipline of study* (`field.n.04`).
+  - `"The fallen cane will rot in water."` $\to$ **`rot`**: *decomposition / decay action* (`rot.v.01`).
+  - `"The stalks have severe red rot."` $\to$ **`rot`**: *plant disease / fungal decay symptom* (`rot.n.01`).
 
 ---
 
@@ -79,14 +156,12 @@ pip install -r requirements.txt
 
 ### 3. Download Required NLTK Corpora
 ```bash
-python -c "import nltk; nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4')"
+python -c "import nltk; nltk.download('stopwords'); nltk.download('wordnet'); nltk.download('omw-1.4'); nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
 ```
 
 ---
 
 ## 🚀 Execution Guide
-
-Run each step sequentially:
 
 ```bash
 # Step 0: Inspect KCC dataset and category distribution
@@ -104,6 +179,9 @@ python retrieve.py
 # Step 4: Pipeline evaluation on user recordings (skips gracefully if my_recordings/ is missing)
 python pipeline_eval.py
 
+# Step 7: Evaluate new NLP components (NER, WSD, Shallow Parsing)
+python nlp_eval.py
+
 # Step 5: Launch Streamlit web app
 streamlit run app.py
 ```
@@ -111,6 +189,18 @@ streamlit run app.py
 ---
 
 ## 📊 Experimental Results
+
+### NLP Course Components Evaluation ([nlp_eval.py](file:///d:/clg/LY/NLP/mini%20project/nlp_eval.py))
+
+| Component | Metric | Score | Evaluation Methodology |
+| :--- | :--- | :---: | :--- |
+| **Agricultural NER** | **Precision** | **97.37%** | Strict span-and-label exact match on benchmark suite |
+| **Agricultural NER** | **Recall** | **100.00%**| Comprehensive multi-token gazetteer coverage |
+| **Agricultural NER** | **F1-Score** | **98.67%** | Harmonic mean of precision and recall |
+| **Word Sense Disambiguation** | **Accuracy** | **100.00%**| Contextual sense resolution on ambiguous target words |
+| **Shallow Parsing** | **Coverage** | **100.00%**| Correct extraction of NP, VP, and PP structures |
+
+---
 
 ### Step 1: Automatic Speech Recognition (Google FLEURS `en_us` 50 Clips)
 
@@ -120,31 +210,9 @@ streamlit run app.py
 | **Whisper base** | 10.52% | 4.97% | 0.79s | **Optimal real-time balance for laptops** |
 | **Whisper small**| 6.76%  | 2.81% | 1.93s | High-accuracy batch processing |
 
-#### Qualitative ASR Error Patterns:
-1. **Phonetic substitutions / homophones**: *'sintra'* recognized as *'sinatra'*; *'tracking'* recognized as *'trafficking'*; *'pools'* as *'poles'*.
-2. **Number formats**: Spoken textual numbers transcribed as digits (*'twentieth century'* vs *'20th century'*).
-3. **Proper nouns**: Non-standard geographical entities and technical vocabulary incur substitution errors.
-
 ---
 
-### Step 2: NLP Morphology & Classification
-
-#### Morphological Comparison: Stemming vs Lemmatization
-
-| Term | Porter Stemmer | WordNet Lemmatizer | Linguistic Distinction |
-| :--- | :--- | :--- | :--- |
-| **infestation** | `infest` | `infestation` | Stemmer chops derivational suffix `-ation` |
-| **varieties** | `varieti` | `variety` | Lemmatizer maps plural `-ies` to valid lexical root |
-| **dropping** | `drop` | `dropping` | Stemmer strips inflectional `-ing` |
-| **fertilizers** | `fertil` | `fertilizer` | Lemmatizer handles plural noun inflection |
-| **spraying** | `spray` | `spraying` | Stemmer reduces verb to base root |
-| **weedicides** | `weedicid` | `weedicides` | Stemmer truncates trailing `-e` heuristically |
-| **borers** | `borer` | `borer` | Lemmatizer maps plural `-s` to noun singular |
-| **cultivation** | `cultiv` | `cultivation` | Stemmer removes suffix `-ation` |
-| **germinating** | `germin` | `germinating` | Stemmer trims `-ating` |
-| **diseases** | `diseas` | `disease` | Lemmatizer restores canonical vocabulary entry |
-
-#### Text Classification Performance (Stratified 80/20 Split on 90,886 KCC Queries)
+### Step 2: Text Classification (90,886 KCC Queries)
 
 | Model Architecture | Accuracy | Macro-F1 | Notes |
 | :--- | :---: | :---: | :--- |
@@ -169,15 +237,6 @@ In commercial sugarcane cultivation, water management directly dictates stalk el
 - **Maturity / Ripening Stage**: Moderate moisture withholding enhances sucrose concentration.
 
 The Farmer Query Assistant serves as the human-interaction frontend:
-1. Translates spoken farmer concerns (e.g. soil crack appearance, leaf rolling, yellowing, drip dripper clogging) into structured agricultural intent.
+1. Translates spoken farmer concerns (e.g. soil crack appearance, leaf rolling, yellowing, drip dripper clogging) into structured agricultural intent and recognized entities.
 2. Cross-references live IoT soil tension / weather sensors before generating definitive irrigation schedule advisories.
 3. Automatically triggers an agronomist review warning whenever retrieval similarity or classification confidence drops below safety thresholds.
-
----
-
-## ⚠️ Limitations & Future Directions
-
-1. **Acoustic and Regional Dialects**: While Whisper handles standard English well, regional rural accents and code-switching (Hinglish/rural colloquial terms) require domain-adapted acoustic fine-tuning.
-2. **Out-of-Vocabulary Agricultural Chemicals**: Novel chemical trade names and regional bio-fertilizer formulations may not be present in static TF-IDF vocabulary.
-3. **Multi-turn Dialogue Context**: Current implementation operates in single-turn intent-and-retrieve mode; extending to conversational state tracking (DST) will enable follow-up questions.
-4. **Sensor & Actuator Integration**: Linking retrieved recommendations directly to field soil moisture probes (capacitive/tensiometers) and solenoid drip valves for closed-loop autonomous irrigation.
